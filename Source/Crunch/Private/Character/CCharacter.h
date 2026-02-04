@@ -9,6 +9,7 @@
 
 class UCAbilitySystemComponent;
 class UCAttributeSet;
+class UWidgetComponent;
 
 UCLASS()
 class ACCharacter : public ACharacter, public IAbilitySystemInterface
@@ -20,6 +21,9 @@ public:
 	ACCharacter();
 	void ServerSideInit();
 	void ClientSideInit();
+	bool IsLocallyControlledByPlayer() const;
+	// only called on server
+	virtual void PossessedBy(AController* NewController) override;
 
 protected:
 	// Called when the game starts or when spawned
@@ -44,4 +48,23 @@ private:
 
 	UPROPERTY()
 	UCAttributeSet* CAttributeSet;
+
+	/*********************************************************/
+	/*                          UI                           */
+	/*********************************************************/
+private:
+	UPROPERTY(VisibleDefaultsOnly, Category = "UI")
+	UWidgetComponent* OverHeadWidgetComponent;
+
+	void ConfigureOverHeadStatusWidget();
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	float HeadStatGaugeVisibilityCheckUpdateGap = 1.f;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	float HeadStatGaugeVisibilityRangeSquared = 10000000.f;
+
+	FTimerHandle HeadStatGaugeVisibilityUpdateTimerHandle;
+
+	void UpdateHeadGaugeVisibility();
 };
