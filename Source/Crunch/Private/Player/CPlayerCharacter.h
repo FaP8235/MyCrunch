@@ -59,4 +59,10 @@ private:
 	FVector GetLookRightDir() const;
 	FVector GetLookFwdDir() const;
 	FVector GetMoveFwdDir() const;
+
+	/**********************************************************/
+	/*                    Death and Respawn                   */
+	/**********************************************************/
+	virtual void OnDead() override;
+	virtual void OnRespawn() override;
 };
