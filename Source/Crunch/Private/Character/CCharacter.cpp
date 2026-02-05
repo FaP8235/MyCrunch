@@ -11,6 +11,7 @@
 #include "GAS/CAbilitySystemStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values
 ACCharacter::ACCharacter()
@@ -45,13 +46,10 @@ bool ACCharacter::IsLocallyControlledByPlayer() const
 	return GetController() != nullptr && GetController()->IsLocalPlayerController();
 }
 
-void ACCharacter::PossessedBy(AController* NewController)
+void ACCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	Super::PossessedBy(NewController);
-	if (NewController && !NewController->IsPlayerController())
-	{
-		ServerSideInit();
-	}
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ACCharacter, TeamID);
 }
 
 // Called when the game starts or when spawned
@@ -60,6 +58,15 @@ void ACCharacter::BeginPlay()
 	Super::BeginPlay();
 	ConfigureOverHeadStatusWidget();
 	MeshRelativeTransform = GetMesh()->GetRelativeTransform();
+}
+
+void ACCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	if (NewController && !NewController->IsPlayerController())
+	{
+		ServerSideInit();
+	}
 }
 
 // Called every frame
@@ -195,6 +202,15 @@ void ACCharacter::Respawn()
 	GetMesh()->GetAnimInstance()->StopAllMontages(0.f);
 	SetStatusGaugeEnable(true);
 
+	if (HasAuthority() && GetController())
+	{
+		TWeakObjectPtr<AActor> StartSpot = GetController()->StartSpot;
+		if (StartSpot.IsValid())
+		{
+			SetActorTransform(StartSpot->GetActorTransform());
+		}
+	}
+
 	if (CAbilitySystemComponent)
 	{
 		CAbilitySystemComponent->ApplyFulllStatEffect();
@@ -207,5 +223,15 @@ void ACCharacter::OnDead()
 
 void ACCharacter::OnRespawn()
 {
+}
+
+void ACCharacter::SetGenericTeamId(const FGenericTeamId& NewTeamID)
+{
+	TeamID = NewTeamID;
+}
+
+FGenericTeamId ACCharacter::GetGenericTeamId() const
+{
+	return TeamID;
 }
 
