@@ -12,6 +12,7 @@
 class UCAbilitySystemComponent;
 class UCAttributeSet;
 class UWidgetComponent;
+class UAIPerceptionStimuliSourceComponent;
 
 UCLASS()
 class ACCharacter : public ACharacter, public IAbilitySystemInterface, public IGenericTeamAgentInterface
@@ -110,4 +111,13 @@ public:
 private:
 	UPROPERTY(Replicated)
 	FGenericTeamId TeamID;
+
+	/*********************************************************/
+	/*                          AI                           */
+	/*********************************************************/
+private:
+	void SetAIPerceptionStimuliSourceEnabled(bool bIsEnabled);
+
+	UPROPERTY()
+	UAIPerceptionStimuliSourceComponent* PerceptionStimuliSourceComponent;
 };

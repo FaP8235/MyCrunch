@@ -12,6 +12,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Perception/AIPerceptionStimuliSourceComponent.h"
+#include "Perception/AISense_Sight.h"
 
 // Sets default values
 ACCharacter::ACCharacter()
@@ -27,6 +29,8 @@ ACCharacter::ACCharacter()
 	OverHeadWidgetComponent->SetupAttachment(GetRootComponent());
 
 	BindGASChangeDelegates();
+
+	PerceptionStimuliSourceComponent = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>("Perception Stimuli Source Component");
 }
 
 void ACCharacter::ServerSideInit()
@@ -58,6 +62,8 @@ void ACCharacter::BeginPlay()
 	Super::BeginPlay();
 	ConfigureOverHeadStatusWidget();
 	MeshRelativeTransform = GetMesh()->GetRelativeTransform();
+
+	PerceptionStimuliSourceComponent->RegisterForSense(UAISense_Sight::StaticClass());
 }
 
 void ACCharacter::PossessedBy(AController* NewController)
@@ -186,16 +192,24 @@ void ACCharacter::PlayDeathAnimation()
 void ACCharacter::StartDeathSequence()
 {
 	OnDead();
+
+	if (CAbilitySystemComponent)
+	{
+		CAbilitySystemComponent->CancelAllAbilities();
+	}
+
 	PlayDeathAnimation();
 	SetStatusGaugeEnable(false);
 
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	SetAIPerceptionStimuliSourceEnabled(false);
 }
 
 void ACCharacter::Respawn()
 {
 	OnRespawn();
+	SetAIPerceptionStimuliSourceEnabled(true);
 	SetRagdollEnabled(false);
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
@@ -233,5 +247,22 @@ void ACCharacter::SetGenericTeamId(const FGenericTeamId& NewTeamID)
 FGenericTeamId ACCharacter::GetGenericTeamId() const
 {
 	return TeamID;
+}
+
+void ACCharacter::SetAIPerceptionStimuliSourceEnabled(bool bIsEnabled)
+{
+	if (!PerceptionStimuliSourceComponent)
+	{
+		return;
+	}
+	
+	if (bIsEnabled)
+	{
+		PerceptionStimuliSourceComponent->RegisterWithPerceptionSystem();
+	}
+	else
+	{
+		PerceptionStimuliSourceComponent->UnregisterFromPerceptionSystem();
+	}
 }
 
