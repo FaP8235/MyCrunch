@@ -78,6 +78,10 @@ private:
 	/*********************************************************/
 	/*                  Death and Respawn                    */
 	/*********************************************************/
+public:
+	bool IsDead() const;
+	void RespawnImmediately();
+private:
 	FTransform MeshRelativeTransform;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Death")
@@ -109,8 +113,11 @@ public:
 	/** Retrieve team identifier in form of FGenericTeamId */
 	virtual FGenericTeamId GetGenericTeamId() const override;
 private:
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing = OnRep_TeamID)
 	FGenericTeamId TeamID;
+
+	UFUNCTION()
+	virtual void OnRep_TeamID();
 
 	/*********************************************************/
 	/*                          AI                           */
