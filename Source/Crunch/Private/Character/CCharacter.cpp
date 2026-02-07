@@ -14,6 +14,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Perception/AIPerceptionStimuliSourceComponent.h"
 #include "Perception/AISense_Sight.h"
+#include "AbilitySystemBlueprintLibrary.h"
 
 // Sets default values
 ACCharacter::ACCharacter()
@@ -94,9 +95,20 @@ UAbilitySystemComponent* ACCharacter::GetAbilitySystemComponent() const
 	return CAbilitySystemComponent;
 }
 
+void ACCharacter::Server_SendGameplayEventToSelf_Implementation(const FGameplayTag& EventTag, const FGameplayEventData& EventData)
+{
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, EventTag, EventData);
+}
+
+bool ACCharacter::Server_SendGameplayEventToSelf_Validate(const FGameplayTag& EventTag, const FGameplayEventData& EventData)
+{
+	return true;
+}
+
 void ACCharacter::BindGASChangeDelegates()
 {
 	CAbilitySystemComponent->RegisterGameplayTagEvent(UCAbilitySystemStatics::GetDeadStatTag()).AddUObject(this, &ACCharacter::DeathTagUpdated);
+	CAbilitySystemComponent->RegisterGameplayTagEvent(UCAbilitySystemStatics::GetStunStatTag()).AddUObject(this, &ACCharacter::StunTagUpdated);
 }
 
 void ACCharacter::DeathTagUpdated(const FGameplayTag Tag, int32 NewCount)
@@ -108,6 +120,25 @@ void ACCharacter::DeathTagUpdated(const FGameplayTag Tag, int32 NewCount)
 	else
 	{
 		Respawn();
+	}
+}
+
+void ACCharacter::StunTagUpdated(const FGameplayTag Tag, int32 NewCount)
+{
+	if (IsDead())
+	{
+		return;
+	}
+
+	if (NewCount != 0)
+	{
+		OnStun();
+		PlayAnimMontage(StunMontage);
+	}
+	else
+	{
+		OnRecoverFromStun();
+		StopAnimMontage(StunMontage);
 	}
 }
 
@@ -156,6 +187,16 @@ void ACCharacter::SetStatusGaugeEnable(bool bIsEnabled)
 	{
 		OverHeadWidgetComponent->SetHiddenInGame(true);
 	}
+}
+
+void ACCharacter::OnStun()
+{
+
+}
+
+void ACCharacter::OnRecoverFromStun()
+{
+
 }
 
 bool ACCharacter::IsDead() const
@@ -217,7 +258,7 @@ void ACCharacter::StartDeathSequence()
 	PlayDeathAnimation();
 	SetStatusGaugeEnable(false);
 
-	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
+	//GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SetAIPerceptionStimuliSourceEnabled(false);
 }
@@ -228,7 +269,7 @@ void ACCharacter::Respawn()
 	SetAIPerceptionStimuliSourceEnabled(true);
 	SetRagdollEnabled(false);
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+	//GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
 	GetMesh()->GetAnimInstance()->StopAllMontages(0.f);
 	SetStatusGaugeEnable(true);
 

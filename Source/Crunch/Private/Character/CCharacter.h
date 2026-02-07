@@ -46,9 +46,14 @@ public:
 public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_SendGameplayEventToSelf(const FGameplayTag& EventTag, const FGameplayEventData& EventData);
+
+
 private:
 	void BindGASChangeDelegates();
 	void DeathTagUpdated(const FGameplayTag Tag, int32 NewCount);
+	void StunTagUpdated(const FGameplayTag Tag, int32 NewCount);
 
 	UPROPERTY(VisibleDefaultsOnly, Category = "Gameplay Ability")
 	UCAbilitySystemComponent* CAbilitySystemComponent;
@@ -75,6 +80,18 @@ private:
 
 	void UpdateHeadGaugeVisibility();
 	void SetStatusGaugeEnable(bool bIsEnabled);
+	/*********************************************************/
+	/*                         Stun                          */
+	/*********************************************************/
+private:
+	UPROPERTY(EditDefaultsOnly, Category = "Stun")
+	UAnimMontage* StunMontage;
+
+
+	virtual void OnStun();
+	virtual void OnRecoverFromStun();
+
+
 	/*********************************************************/
 	/*                  Death and Respawn                    */
 	/*********************************************************/
