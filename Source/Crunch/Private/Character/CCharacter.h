@@ -7,13 +7,14 @@
 #include "AbilitySystemInterface.h"
 #include "GameplayTagContainer.h"
 #include "GenericTeamAgentInterface.h"
+#include "GAS/CGameplayAbilityTypes.h"
 #include "CCharacter.generated.h"
 
 class UCAbilitySystemComponent;
 class UCAttributeSet;
 class UWidgetComponent;
 class UAIPerceptionStimuliSourceComponent;
-
+class UGameplayAbility;
 UCLASS()
 class ACCharacter : public ACharacter, public IAbilitySystemInterface, public IGenericTeamAgentInterface
 {
@@ -26,7 +27,7 @@ public:
 	void ClientSideInit();
 	bool IsLocallyControlledByPlayer() const;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	
+	const TMap<ECAbilityInputID, TSubclassOf<UGameplayAbility>>& GetAbilities() const;
 
 protected:
 	// Called when the game starts or when spawned

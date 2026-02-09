@@ -4,10 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "GAS/CGameplayAbilityTypes.h"
 #include "GameplayWidget.generated.h"
 
 class UValueGauge;
 class UAbilitySystemComponent;
+class UGameplayAbility;
+class UAbilityListView;
 /**
  * 
  */
@@ -18,6 +21,7 @@ class UGameplayWidget : public UUserWidget
 
 public:
 	virtual void NativeConstruct() override;
+	void ConfigureAbilities(const TMap<ECAbilityInputID, TSubclassOf<UGameplayAbility>>& Abilities);
 	
 private:
 	UPROPERTY(meta=(BindWidget))
@@ -25,6 +29,9 @@ private:
 
 	UPROPERTY(meta=(BindWidget))
 	UValueGauge* ManaBar;
+
+	UPROPERTY(meta=(BindWidget))
+	UAbilityListView* AbilityListView;
 
 	UPROPERTY()
 	UAbilitySystemComponent* OwnerAbilitySystemComponent;
