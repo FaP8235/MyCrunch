@@ -15,6 +15,7 @@
 #include "Perception/AIPerceptionStimuliSourceComponent.h"
 #include "Perception/AISense_Sight.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "Crunch/Crunch.h"
 
 // Sets default values
 ACCharacter::ACCharacter()
@@ -22,6 +23,8 @@ ACCharacter::ACCharacter()
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_SpringArm, ECR_Ignore);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Target, ECR_Ignore);
 
 	CAbilitySystemComponent = CreateDefaultSubobject<UCAbilitySystemComponent>("CAbility System Component");
 	CAttributeSet = CreateDefaultSubobject<UCAttributeSet>("CAttribute Set");
@@ -37,8 +40,7 @@ ACCharacter::ACCharacter()
 void ACCharacter::ServerSideInit()
 {
 	CAbilitySystemComponent->InitAbilityActorInfo(this, this);
-	CAbilitySystemComponent->ApplyInitialEffects();
-	CAbilitySystemComponent->GiveInitialAbilities();
+	CAbilitySystemComponent->ServerSideInit();
 }
 
 void ACCharacter::ClientSideInit()
@@ -111,9 +113,15 @@ bool ACCharacter::Server_SendGameplayEventToSelf_Validate(const FGameplayTag& Ev
 }
 
 void ACCharacter::BindGASChangeDelegates()
-{
-	CAbilitySystemComponent->RegisterGameplayTagEvent(UCAbilitySystemStatics::GetDeadStatTag()).AddUObject(this, &ACCharacter::DeathTagUpdated);
-	CAbilitySystemComponent->RegisterGameplayTagEvent(UCAbilitySystemStatics::GetStunStatTag()).AddUObject(this, &ACCharacter::StunTagUpdated);
+{	
+	if (CAbilitySystemComponent)
+	{
+		CAbilitySystemComponent->RegisterGameplayTagEvent(UCAbilitySystemStatics::GetDeadStatTag()).AddUObject(this, &ACCharacter::DeathTagUpdated);
+		CAbilitySystemComponent->RegisterGameplayTagEvent(UCAbilitySystemStatics::GetStunStatTag()).AddUObject(this, &ACCharacter::StunTagUpdated);
+		CAbilitySystemComponent->RegisterGameplayTagEvent(UCAbilitySystemStatics::GetAimStatTag()).AddUObject(this, &ACCharacter::AimTagUpdated);
+
+		CAbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UCAttributeSet::GetMoveSpeedAttribute()).AddUObject(this, &ACCharacter::MoveSpeedUpdated);
+	}
 }
 
 void ACCharacter::DeathTagUpdated(const FGameplayTag Tag, int32 NewCount)
@@ -145,6 +153,28 @@ void ACCharacter::StunTagUpdated(const FGameplayTag Tag, int32 NewCount)
 		OnRecoverFromStun();
 		StopAnimMontage(StunMontage);
 	}
+}
+
+void ACCharacter::AimTagUpdated(const FGameplayTag Tag, int32 NewCount)
+{
+	SetIsAiming(NewCount != 0);
+}
+
+void ACCharacter::SetIsAiming(bool bIsAiming)
+{
+	bUseControllerRotationYaw = bIsAiming;
+	GetCharacterMovement()->bOrientRotationToMovement = !bIsAiming;
+	OnAimStateChanged(bIsAiming);
+}
+
+void ACCharacter::OnAimStateChanged(bool bIsAiming)
+{
+	// Override in child class
+}
+
+void ACCharacter::MoveSpeedUpdated(const FOnAttributeChangeData& Data)
+{
+	GetCharacterMovement()->MaxWalkSpeed = Data.NewValue;
 }
 
 void ACCharacter::ConfigureOverHeadStatusWidget()

@@ -24,6 +24,36 @@ FGameplayTag UCAbilitySystemStatics::GetBasicAttackInputPressedTag()
 	return FGameplayTag::RequestGameplayTag("Ability.BasicAttack.Pressed");
 }
 
+FGameplayTag UCAbilitySystemStatics::GetAimStatTag()
+{
+	return FGameplayTag::RequestGameplayTag("Stats.Aim");
+}
+
+FGameplayTag UCAbilitySystemStatics::GetCameraShakeCueTag()
+{
+	return FGameplayTag::RequestGameplayTag("GameplayCue.CameraShake");
+}
+
+FGameplayTag UCAbilitySystemStatics::GetHealthFullStatTag()
+{
+	return FGameplayTag::RequestGameplayTag("Stats.Health.Full");
+}
+
+FGameplayTag UCAbilitySystemStatics::GetHealthEmptyStatTag()
+{
+	return FGameplayTag::RequestGameplayTag("Stats.Health.Empty");
+}
+
+FGameplayTag UCAbilitySystemStatics::GetManaFullStatTag()
+{
+	return FGameplayTag::RequestGameplayTag("Stats.Mana.Full");
+}
+
+FGameplayTag UCAbilitySystemStatics::GetManaEmptyStatTag()
+{
+	return FGameplayTag::RequestGameplayTag("Stats.Mana.Empty");
+}
+
 float UCAbilitySystemStatics::GetStaticCooldownDurationForAbility(const UGameplayAbility* Ability)
 {
 	if (!Ability)

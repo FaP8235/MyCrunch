@@ -3,10 +3,56 @@
 
 #include "GAS/CAbilitySystemComponent.h"
 #include "GAS/CAttributeSet.h"
+#include "GAS/CGameplayAbilityTypes.h"
+#include "GAS/CHeroAttributeSet.h"
+#include "GAS/CAbilitySystemStatics.h"
 
 UCAbilitySystemComponent::UCAbilitySystemComponent()
 {
 	GetGameplayAttributeValueChangeDelegate(UCAttributeSet::GetHealthAttribute()).AddUObject(this, &UCAbilitySystemComponent::HealthUpdated);
+	GetGameplayAttributeValueChangeDelegate(UCAttributeSet::GetManaAttribute()).AddUObject(this, &UCAbilitySystemComponent::ManaUpdated);
+	GenericConfirmInputID = (int32)ECAbilityInputID::Confirm;
+	GenericCancelInputID = (int32)ECAbilityInputID::Cancel;
+}
+
+void UCAbilitySystemComponent::InitializeBaseAttributes()
+{
+	if (!BaseStatDataTable || !GetOwner())
+	{
+		return;
+	}
+
+	const FHeroBaseStats* BaseStats = nullptr;
+
+	for (const TPair<FName, uint8*>& DataPair : BaseStatDataTable->GetRowMap())
+	{
+		BaseStats = BaseStatDataTable->FindRow<FHeroBaseStats>(DataPair.Key, "");
+		if (BaseStats && BaseStats->Class == GetOwner()->GetClass())
+		{
+			break;
+		}
+	}
+
+	if (BaseStats)
+	{
+		SetNumericAttributeBase(UCAttributeSet::GetMaxHealthAttribute(), BaseStats->BaseMaxHealth);
+		SetNumericAttributeBase(UCAttributeSet::GetMaxManaAttribute(), BaseStats->BaseMaxMana);
+		SetNumericAttributeBase(UCAttributeSet::GetAttackDamageAttribute(), BaseStats->BaseAttackDamage);
+		SetNumericAttributeBase(UCAttributeSet::GetArmorAttribute(), BaseStats->BaseArmor);
+		SetNumericAttributeBase(UCAttributeSet::GetMoveSpeedAttribute(), BaseStats->BaseMoveSpeed);
+
+		SetNumericAttributeBase(UCHeroAttributeSet::GetStrengthAttribute(), BaseStats->Strength);
+		SetNumericAttributeBase(UCHeroAttributeSet::GetStrengthGrowthRateAttribute(), BaseStats->StrengthGrowthRate);
+		SetNumericAttributeBase(UCHeroAttributeSet::GetIntelligenceAttribute(), BaseStats->Intelligence);
+		SetNumericAttributeBase(UCHeroAttributeSet::GetIntelligenceGrowthRateAttribute(), BaseStats->IntelligenceGrowthRate);
+	}
+}
+
+void UCAbilitySystemComponent::ServerSideInit() 
+{
+	InitializeBaseAttributes();
+	ApplyInitialEffects();
+	GiveInitialAbilities();
 }
 
 void UCAbilitySystemComponent::ApplyInitialEffects()
@@ -57,10 +103,82 @@ void UCAbilitySystemComponent::AuthApplyGameplayEffect(TSubclassOf<UGameplayEffe
 
 void UCAbilitySystemComponent::HealthUpdated(const FOnAttributeChangeData& ChangeData)
 {
-	if (!GetOwner())	return;
-
-	if (ChangeData.NewValue <= 0 && GetOwner()->HasAuthority() && DeathEffect)
+	if (!GetOwner() || !GetOwner()->HasAuthority())
 	{
-		AuthApplyGameplayEffect(DeathEffect);
+		return;
+	}
+
+	bool bFound = false;
+	float MaxHealth = GetGameplayAttributeValue(UCAttributeSet::GetMaxHealthAttribute(), bFound);
+	if (bFound && ChangeData.NewValue >= MaxHealth)
+	{
+		if (!HasMatchingGameplayTag(UCAbilitySystemStatics::GetHealthFullStatTag()))
+		{
+			// This is done local only.
+			AddLooseGameplayTag(UCAbilitySystemStatics::GetHealthFullStatTag());
+		}
+	}
+	else
+	{
+		RemoveLooseGameplayTag(UCAbilitySystemStatics::GetHealthFullStatTag());
+	}
+
+
+	if (ChangeData.NewValue <= 0) {
+
+		if (!HasMatchingGameplayTag(UCAbilitySystemStatics::GetHealthEmptyStatTag()))
+		{
+			AddLooseGameplayTag(UCAbilitySystemStatics::GetHealthEmptyStatTag());
+
+			if (DeathEffect)
+			{
+				AuthApplyGameplayEffect(DeathEffect);
+			}
+		}
+	}
+	else
+	{
+		RemoveLooseGameplayTag(UCAbilitySystemStatics::GetHealthEmptyStatTag());
+	}
+}
+
+void UCAbilitySystemComponent::ManaUpdated(const FOnAttributeChangeData& ChangeData)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	bool bFound = false;
+	float MaxMana = GetGameplayAttributeValue(UCAttributeSet::GetMaxManaAttribute(), bFound);
+	if (bFound && ChangeData.NewValue >= MaxMana)
+	{
+		if (!HasMatchingGameplayTag(UCAbilitySystemStatics::GetManaFullStatTag()))
+		{
+			// This is done local only.
+			AddLooseGameplayTag(UCAbilitySystemStatics::GetManaFullStatTag());
+		}
+	}
+	else
+	{
+		RemoveLooseGameplayTag(UCAbilitySystemStatics::GetManaFullStatTag());
+	}
+
+
+	if (ChangeData.NewValue <= 0) {
+
+		if (!HasMatchingGameplayTag(UCAbilitySystemStatics::GetManaEmptyStatTag()))
+		{
+			AddLooseGameplayTag(UCAbilitySystemStatics::GetManaEmptyStatTag());
+
+			if (DeathEffect)
+			{
+				AuthApplyGameplayEffect(DeathEffect);
+			}
+		}
+	}
+	else
+	{
+		RemoveLooseGameplayTag(UCAbilitySystemStatics::GetManaEmptyStatTag());
 	}
 }

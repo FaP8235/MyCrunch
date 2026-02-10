@@ -18,15 +18,18 @@ class UCAbilitySystemComponent : public UAbilitySystemComponent
 	
 public:
 	UCAbilitySystemComponent();
-	void ApplyInitialEffects();
-	void GiveInitialAbilities();
+	void InitializeBaseAttributes();
+	void ServerSideInit();
 	void ApplyFulllStatEffect();
 	// Get the Abilities that is unique for the avatar actor, this do not include Generic/Basic ones
 	const TMap<ECAbilityInputID, TSubclassOf<UGameplayAbility>>& GetAbilities() const;
 
 private:
+	void ApplyInitialEffects();
+	void GiveInitialAbilities();
 	void AuthApplyGameplayEffect(TSubclassOf<UGameplayEffect> GameplayEffect, int Level = 1);
 	void HealthUpdated(const FOnAttributeChangeData& ChangeData);
+	void ManaUpdated(const FOnAttributeChangeData& ChangeData);
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Effects")
 	TSubclassOf<UGameplayEffect> FullStatEffect;
 	
@@ -41,4 +44,7 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Abilities")
 	TMap<ECAbilityInputID, TSubclassOf<UGameplayAbility>> BasicAbilities;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Abilities")
+	UDataTable* BaseStatDataTable;
 };

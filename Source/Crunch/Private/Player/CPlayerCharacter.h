@@ -12,6 +12,7 @@ class USpringArmComponent;
 class UCameraComponent;
 class UInputAction;
 class UInputMappingContext;
+class UCHeroAttributeSet;
 /**
  * 
  */
@@ -32,6 +33,14 @@ private:
 	UPROPERTY(VisibleDefaultsOnly, Category = "View")
 	UCameraComponent* ViewCam;
 
+
+	/**********************************************************/
+	/*                    Gameplay Ability                    */
+	/**********************************************************/
+private:
+	virtual void OnAimStateChanged(bool bIsAiming) override;
+	UPROPERTY()
+	UCHeroAttributeSet* HeroAttributeSet;
 
 	/**********************************************************/
 	/*                          Input                         */
@@ -73,4 +82,19 @@ private:
 	/**********************************************************/
 	virtual void OnDead() override;
 	virtual void OnRespawn() override;
+
+	/**********************************************************/
+	/*                       Camera View                      */
+	/**********************************************************/
+private:
+	UPROPERTY(EditDefaultsOnly, Category = "View")
+	FVector CameraAimLocalOffset;
+
+	UPROPERTY(EditDefaultsOnly, Category = "View")
+	float CameraLerpSpeed = 20.f;
+
+	FTimerHandle CameraLerpTimerHandle;
+
+	void LerpCameraToLocalOffestLocation(const FVector& Goal);
+	void TickCameraLocalOffsetLerp(FVector Goal);
 };

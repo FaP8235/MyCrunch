@@ -11,6 +11,7 @@ class UValueGauge;
 class UAbilitySystemComponent;
 class UGameplayAbility;
 class UAbilityListView;
+class UStatsGauge;
 /**
  * 
  */
@@ -32,6 +33,21 @@ private:
 
 	UPROPERTY(meta=(BindWidget))
 	UAbilityListView* AbilityListView;
+	
+	UPROPERTY(meta=(BindWidget))
+	UStatsGauge* AttackDamageGauge;
+
+	UPROPERTY(meta=(BindWidget))
+	UStatsGauge* ArmorGauge;
+
+	UPROPERTY(meta=(BindWidget))
+	UStatsGauge* MoveSpeedGauge;
+
+	UPROPERTY(meta=(BindWidget))
+	UStatsGauge* IntelligenceGauge;
+	
+	UPROPERTY(meta=(BindWidget))
+	UStatsGauge* StrengthGauge;
 
 	UPROPERTY()
 	UAbilitySystemComponent* OwnerAbilitySystemComponent;

@@ -8,6 +8,7 @@
 #include "GameplayTagContainer.h"
 #include "GenericTeamAgentInterface.h"
 #include "GAS/CGameplayAbilityTypes.h"
+#include "GameplayEffectTypes.h"
 #include "CCharacter.generated.h"
 
 class UCAbilitySystemComponent;
@@ -55,6 +56,10 @@ private:
 	void BindGASChangeDelegates();
 	void DeathTagUpdated(const FGameplayTag Tag, int32 NewCount);
 	void StunTagUpdated(const FGameplayTag Tag, int32 NewCount);
+	void AimTagUpdated(const FGameplayTag Tag, int32 NewCount);
+	void SetIsAiming(bool bIsAiming);
+	virtual void OnAimStateChanged(bool bIsAiming);
+	void MoveSpeedUpdated(const FOnAttributeChangeData& Data);
 
 	UPROPERTY(VisibleDefaultsOnly, Category = "Gameplay Ability")
 	UCAbilitySystemComponent* CAbilitySystemComponent;
