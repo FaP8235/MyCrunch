@@ -7,6 +7,7 @@
 #include "GAS/GA_Combo.h"
 #include "GameplayTagsManager.h"
 #include "GAS/CAbilitySystemStatics.h"
+#include "AbilitySystemBlueprintLibrary.h"
 
 UGA_UpperCut::UGA_UpperCut()
 {
@@ -59,10 +60,13 @@ void UGA_UpperCut::StartLaunching(FGameplayEventData EventData)
 {
 	if (K2_HasAuthority())
 	{
-		TArray<FHitResult> TargetHitResults = GetHitResultFromSweepLocationTargetData(EventData.TargetData, TargetSweepSphereRadius, ETeamAttitude::Hostile, ShouldDrawDebug());
 		PushTarget(GetAvatarActorFromActorInfo(), FVector::UpVector * UpperCutLaunchSpeed);
-		for (FHitResult& HitResult : TargetHitResults)
+		
+		int HitResultCount = UAbilitySystemBlueprintLibrary::GetDataCountFromTargetData(EventData.TargetData);
+
+		for (int i = 0; i < HitResultCount; i++)
 		{
+			FHitResult HitResult = UAbilitySystemBlueprintLibrary::GetHitResultFromTargetData(EventData.TargetData, i);
 			/*UE_LOG(LogTemp, Warning, TEXT("I Hit: %s"), *HitResult.GetActor()->GetName());*/
 			PushTarget(HitResult.GetActor(), FVector::UpVector * UpperCutLaunchSpeed);
 			ApplyGameplayEffectToHitResultActor(HitResult, LaunchDamageEffect, GetAbilityLevel(CurrentSpecHandle, CurrentActorInfo));
@@ -119,15 +123,18 @@ void UGA_UpperCut::HandleComboDamageEvent(FGameplayEventData EventData)
 {
 	if (K2_HasAuthority())
 	{
-		TArray<FHitResult> TargetHitResults = GetHitResultFromSweepLocationTargetData(EventData.TargetData, TargetSweepSphereRadius, ETeamAttitude::Hostile, ShouldDrawDebug());
 		PushTarget(GetAvatarActorFromActorInfo(), FVector::UpVector * UpperCutComboHoldSpeed);
 		const FGenericDamageEffectDef* EffectDef = GetDamageEffecctDefForCurrentCombo();
 		if (!EffectDef)
 		{
 			return;
 		}
-		for (FHitResult& HitResult : TargetHitResults)
+
+		int HitResultCount = UAbilitySystemBlueprintLibrary::GetDataCountFromTargetData(EventData.TargetData);
+
+		for (int i = 0; i < HitResultCount; i++)
 		{
+			FHitResult HitResult = UAbilitySystemBlueprintLibrary::GetHitResultFromTargetData(EventData.TargetData, i);
 			FVector PushVel = GetAvatarActorFromActorInfo()->GetActorTransform().TransformVector(EffectDef->PushVelocity);
 
 			/*UE_LOG(LogTemp, Warning, TEXT("I Hit: %s"), *HitResult.GetActor()->GetName());*/
