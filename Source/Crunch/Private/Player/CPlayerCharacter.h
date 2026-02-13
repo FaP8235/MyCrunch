@@ -13,6 +13,7 @@ class UCameraComponent;
 class UInputAction;
 class UInputMappingContext;
 class UCHeroAttributeSet;
+class UInventoryComponent;
 /**
  * 
  */
@@ -103,4 +104,10 @@ private:
 
 	void LerpCameraToLocalOffestLocation(const FVector& Goal);
 	void TickCameraLocalOffsetLerp(FVector Goal);
+
+	/**********************************************************/
+	/*                        Inventory                       */
+	/**********************************************************/
+private:
+	UInventoryComponent* InventoryComponent;
 };

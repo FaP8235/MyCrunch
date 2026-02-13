@@ -10,6 +10,8 @@
 
 class ACPlayerCharacter;
 class UGameplayWidget;
+class UInputMappingContext;
+class UInputAction;
 /**
  * 
  */
@@ -31,6 +33,7 @@ public:
 	/** Retrieve team identifier in form of FGenericTeamId */
 	virtual FGenericTeamId GetGenericTeamId() const override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void SetupInputComponent() override;
 
 private:
 	void SpawnGameplayWidget();
@@ -46,4 +49,13 @@ private:
 
 	UPROPERTY(Replicated)
 	FGenericTeamId TeamID;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UInputMappingContext* UIInputMapping;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UInputAction* ShopToggleInputAction;
+
+	UFUNCTION()
+	void ToggleShop();
 };
