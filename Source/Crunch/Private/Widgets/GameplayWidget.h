@@ -14,6 +14,7 @@ class UAbilityListView;
 class UStatsGauge;
 class UShopWidget;
 class UWidgetAnimation;
+class UInventoryWidget;
 /**
  * 
  */
@@ -54,6 +55,9 @@ private:
 
 	UPROPERTY(meta=(BindWidget))
 	UShopWidget* ShopWidget;
+
+	UPROPERTY(meta=(BindWidget))
+	UInventoryWidget* InventoryWidget;
 
 	UPROPERTY(Transient, meta=(BindWidgetAnim))
 	UWidgetAnimation* ShopPopupAnimation;

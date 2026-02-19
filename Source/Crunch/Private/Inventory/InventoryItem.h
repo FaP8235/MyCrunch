@@ -43,15 +43,38 @@ class UInventoryItem : public UObject
 {
 	GENERATED_BODY()
 public:
+
+	// return true if was able to add
+	bool AddStackCount();
+
+	// return true if the stack is not empty after reducing
+	bool ReduceStackCount();
+	
+	// return true if was able to set
+	bool SetStackCount(int NewStackCount);
+
+	bool IsStackFull() const;
+	bool IsForItem(const UPA_ShopItem* Item) const;
+
+	UInventoryItem();
+	bool IsValid() const;
 	void InitItem(const FInventoryItemHandle& NewHandle, const UPA_ShopItem* NewShopItem);
 	const UPA_ShopItem* GetShopItem() const { return ShopItem; }
 	FInventoryItemHandle GetHandle() const { return Handle; }
+	
+	bool TryActivateGrantedAbility(UAbilitySystemComponent* AbilitySystemComponent);
+	void ApplyConsumeEffect(UAbilitySystemComponent* AbilitySystemComponent);
+	void RemoveGASModifications(UAbilitySystemComponent* AbilitySystemComponent);
 	void ApplyGASModifications(UAbilitySystemComponent* AbilitySystemComponent);
+	FORCEINLINE int GetStackCount() const { return StackCount; }
+	void SetSlot(int NewSlot);
 
 private:
 	UPROPERTY()
 	const UPA_ShopItem* ShopItem;
 	FInventoryItemHandle Handle;
+	int StackCount;
+	int Slot;
 
 	FActiveGameplayEffectHandle AppliedEquippedEffectHandle;
 	FGameplayAbilitySpecHandle GrantedAbilitySpecHandle;

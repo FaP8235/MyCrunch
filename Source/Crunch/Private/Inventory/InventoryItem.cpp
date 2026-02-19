@@ -9,7 +9,7 @@
 #include "GAS/CAbilitySystemStatics.h"
 
 FInventoryItemHandle::FInventoryItemHandle()
-	:HandleId(GetInvalidId())
+	:HandleId{ GetInvalidId() }
 {
 }
 
@@ -55,10 +55,112 @@ uint32 GetTypeHash(const FInventoryItemHandle& Key)
 	return Key.GetHandleId();
 }
 
+bool UInventoryItem::AddStackCount()
+{
+	if (IsStackFull())
+	{
+		return false;
+	}
+
+	StackCount++;
+	return true;
+}
+
+bool UInventoryItem::ReduceStackCount()
+{
+	StackCount--;
+	if (StackCount <= 0)
+	{
+		return false;
+	}
+	return false;
+}
+
+bool UInventoryItem::SetStackCount(int NewStackCount)
+{
+	if (NewStackCount > 0 && NewStackCount <= GetShopItem()->GetMaxStackCount())
+	{
+		StackCount = NewStackCount;
+		return true;
+	}
+	return false;
+}
+
+bool UInventoryItem::IsStackFull() const
+{
+	return StackCount >= GetShopItem()->GetMaxStackCount();
+}
+
+bool UInventoryItem::IsForItem(const UPA_ShopItem* Item) const
+{
+	if (!Item)
+	{
+		return false;
+	}
+	return GetShopItem() == Item;
+
+}
+
+UInventoryItem::UInventoryItem()
+	:StackCount{1}
+{
+}
+
+bool UInventoryItem::IsValid() const
+{
+	return ShopItem != nullptr;
+}
+
 void UInventoryItem::InitItem(const FInventoryItemHandle& NewHandle, const UPA_ShopItem* NewShopItem)
 {
 	Handle = NewHandle;
 	ShopItem = NewShopItem;
+}
+
+bool UInventoryItem::TryActivateGrantedAbility(UAbilitySystemComponent* AbilitySystemComponent)
+{
+	if (!GrantedAbilitySpecHandle.IsValid())
+	{
+		return false;
+	}
+
+	if (AbilitySystemComponent && AbilitySystemComponent->TryActivateAbility(GrantedAbilitySpecHandle))
+	{
+		return true;
+	}
+	return false;
+}
+
+void UInventoryItem::ApplyConsumeEffect(UAbilitySystemComponent* AbilitySystemComponent)
+{
+	if (!ShopItem)
+	{
+		return;
+	}
+	TSubclassOf<UGameplayEffect> ConsumeEffect = ShopItem->GetConsumeEffect();
+	if (!ConsumeEffect)
+	{
+		return;
+	}
+	AbilitySystemComponent->BP_ApplyGameplayEffectToSelf(ConsumeEffect, 1, AbilitySystemComponent->MakeEffectContext());
+}
+
+void UInventoryItem::RemoveGASModifications(UAbilitySystemComponent* AbilitySystemComponent)
+{
+	if (!AbilitySystemComponent)
+	{
+		return;
+	}
+
+	if (AppliedEquippedEffectHandle.IsValid())
+	{
+		AbilitySystemComponent->RemoveActiveGameplayEffect(AppliedEquippedEffectHandle);
+	}
+
+	if (GrantedAbilitySpecHandle.IsValid())
+	{
+		AbilitySystemComponent->SetRemoveAbilityOnEnd(GrantedAbilitySpecHandle);
+	}
 }
 
 void UInventoryItem::ApplyGASModifications(UAbilitySystemComponent* AbilitySystemComponent)
@@ -92,4 +194,9 @@ void UInventoryItem::ApplyGASModifications(UAbilitySystemComponent* AbilitySyste
 			GrantedAbilitySpecHandle = AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(GrantedAbility));
 		}
 	}
+}
+
+void UInventoryItem::SetSlot(int NewSlot)
+{
+	Slot = NewSlot;
 }

@@ -18,6 +18,16 @@ UInventoryComponent::UInventoryComponent()
 	
 }
 
+void UInventoryComponent::TryActivateItem(const FInventoryItemHandle& ItemHandle)
+{
+	UInventoryItem* InventoryItem = GetInventoryItemByHandle(ItemHandle);
+	if (!InventoryItem)
+	{
+		return;
+	}
+	Server_ActivateItem(ItemHandle);
+}
+
 void UInventoryComponent::TryPurchase(const UPA_ShopItem* ItemToPurchase)
 {
 	if (!OwnerAbilitySystemComponent)
@@ -43,6 +53,61 @@ float UInventoryComponent::GetGold() const
 	return 0.f;
 }
 
+void UInventoryComponent::ItemSlotChanged(const FInventoryItemHandle& Handle, int NewSlotNumber)
+{
+	if (UInventoryItem* FoundItem = GetInventoryItemByHandle(Handle))
+	{
+		FoundItem->SetSlot(NewSlotNumber);
+	}
+}
+
+UInventoryItem* UInventoryComponent::GetInventoryItemByHandle(const FInventoryItemHandle& Handle) const
+{
+	UInventoryItem* const* FoundItem = InventoryMap.Find(Handle);
+	if (FoundItem)
+	{
+		return *FoundItem;
+	}
+	return nullptr;
+}
+
+bool UInventoryComponent::IsFullFor(const UPA_ShopItem* Item) const
+{
+	if (!Item)
+	{
+		return false;
+	}
+
+	if (IsAllSlotOccupied())
+	{
+		return GetAvailableStackForItem(Item) == nullptr;
+	}
+
+	return false;
+}
+
+bool UInventoryComponent::IsAllSlotOccupied() const
+{
+	return InventoryMap.Num() >= GetCapacity();
+}
+
+UInventoryItem* UInventoryComponent::GetAvailableStackForItem(const UPA_ShopItem* Item) const
+{
+	if (!Item->GetIsStackable())
+	{
+		return nullptr;
+	}
+
+	for (const TPair<FInventoryItemHandle, UInventoryItem*>& ItemPair : InventoryMap)
+	{
+		if (ItemPair.Value && ItemPair.Value->IsForItem(Item) && !ItemPair.Value->IsStackFull())
+		{
+			return ItemPair.Value;
+		}
+	}
+	
+	return nullptr;
+}
 
 // Called when the game starts
 void UInventoryComponent::BeginPlay()
@@ -53,20 +118,119 @@ void UInventoryComponent::BeginPlay()
 	OwnerAbilitySystemComponent = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetOwner());
 }
 
+void UInventoryComponent::Server_ActivateItem_Implementation(FInventoryItemHandle ItemHandle)
+{
+	UInventoryItem* InventoryItem = GetInventoryItemByHandle(ItemHandle);
+	if (!InventoryItem)
+	{
+		return;
+	}
+
+	InventoryItem->TryActivateGrantedAbility(OwnerAbilitySystemComponent);
+	const UPA_ShopItem* Item = InventoryItem->GetShopItem();
+	if (Item->GetIsConsumable())
+	{
+		ConsumeItem(InventoryItem);
+	}
+}
+
+bool UInventoryComponent::Server_ActivateItem_Validate(FInventoryItemHandle ItemHandle)
+{
+	return true;
+}
+
 void UInventoryComponent::GrantItem(const UPA_ShopItem* NewItem)
 {
 	if (!GetOwner()->HasAuthority())
 	{
 		return;
 	}
-	UInventoryItem* InventoryItem = NewObject<UInventoryItem>();
-	FInventoryItemHandle NewHandle = FInventoryItemHandle::CreateHandle();
-	InventoryItem->InitItem(NewHandle, NewItem);
-	InventoryMap.Add(NewHandle, InventoryItem);
-	OnItemAdded.Broadcast(InventoryItem);
-	UE_LOG(LogTemp, Warning, TEXT("Server Adding Shop Item: %s, with Id: %d"), *(InventoryItem->GetShopItem()->GetItemName().ToString()), NewHandle.GetHandleId());
-	Client_ItemAdded(NewHandle, NewItem);
-	InventoryItem->ApplyGASModifications(OwnerAbilitySystemComponent);
+
+	if (UInventoryItem* StackItem = GetAvailableStackForItem(NewItem))
+	{
+		StackItem->AddStackCount();
+		OnItemStackCountChanged.Broadcast(StackItem->GetHandle(), StackItem->GetStackCount());
+		Client_ItemStackCountChanged(StackItem->GetHandle(), StackItem->GetStackCount());
+	}
+	else
+	{
+		UInventoryItem* InventoryItem = NewObject<UInventoryItem>();
+		FInventoryItemHandle NewHandle = FInventoryItemHandle::CreateHandle();
+		InventoryItem->InitItem(NewHandle, NewItem);
+		InventoryMap.Add(NewHandle, InventoryItem);
+		OnItemAdded.Broadcast(InventoryItem);
+		UE_LOG(LogTemp, Warning, TEXT("Server Adding Shop Item: %s, with Id: %d"), *(InventoryItem->GetShopItem()->GetItemName().ToString()), NewHandle.GetHandleId());
+		Client_ItemAdded(NewHandle, NewItem);
+		InventoryItem->ApplyGASModifications(OwnerAbilitySystemComponent);
+	}
+}
+
+void UInventoryComponent::ConsumeItem(UInventoryItem* Item)
+{
+	if (!GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	if (!Item)
+	{
+		return;
+	}
+
+	Item->ApplyConsumeEffect(OwnerAbilitySystemComponent);
+	if (!Item->ReduceStackCount())
+	{
+		RemoveItem(Item);
+	}
+	else
+	{
+		OnItemStackCountChanged.Broadcast(Item->GetHandle(), Item->GetStackCount());
+		Client_ItemStackCountChanged(Item->GetHandle(), Item->GetStackCount());
+	}
+}
+
+void UInventoryComponent::RemoveItem(UInventoryItem* Item)
+{
+	if (!GetOwner()->HasAuthority())
+	{
+		return;
+	}
+	Item->RemoveGASModifications(OwnerAbilitySystemComponent);
+	OnItemRemoved.Broadcast(Item->GetHandle());
+	InventoryMap.Remove(Item->GetHandle());
+	Client_ItemRemoved(Item->GetHandle());
+}
+
+void UInventoryComponent::Client_ItemRemoved_Implementation(FInventoryItemHandle ItemHandle)
+{
+	if (GetOwner()->HasAuthority())
+	{
+		return;
+	}
+	UInventoryItem* InventoryItem = GetInventoryItemByHandle(ItemHandle);
+
+	if (!InventoryItem)
+	{
+		return;
+	}
+
+	OnItemRemoved.Broadcast(ItemHandle);
+	InventoryMap.Remove(ItemHandle);
+}
+
+void UInventoryComponent::Client_ItemStackCountChanged_Implementation(FInventoryItemHandle Handle, int NewCount)
+{
+	if (GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	UInventoryItem* FoundItem = GetInventoryItemByHandle(Handle);
+	if (FoundItem)
+	{
+		FoundItem->SetStackCount(NewCount);
+		OnItemStackCountChanged.Broadcast(Handle, NewCount);
+	}
 }
 
 void UInventoryComponent::Client_ItemAdded_Implementation(FInventoryItemHandle AssignedHandle, const UPA_ShopItem* Item)
@@ -93,6 +257,12 @@ void UInventoryComponent::Server_Purchase_Implementation(const UPA_ShopItem* Ite
 	{
 		return;
 	}
+
+	if (IsFullFor(ItemToPurchase))
+	{
+		return;
+	}
+
 	OwnerAbilitySystemComponent->ApplyModToAttribute(UCHeroAttributeSet::GetGoldAttribute(), EGameplayModOp::Additive, -ItemToPurchase->GetPrice());
 	/*UE_LOG(LogTemp, Warning, TEXT("Bought Item: %s"), *(ItemToPurchase->GetName()));*/
 	GrantItem(ItemToPurchase);
